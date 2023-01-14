@@ -138,6 +138,7 @@
     var speed;
     var words;
     var displayArea;
+    var animationId;
     var delay;
     var i = 0;
     var paused = false;
@@ -159,11 +160,11 @@
       animationId = requestAnimationFrame(displayWord);
     }
     
-    function displayWord() {
-      console.log('first')
+    function displayWord(isCalledFromPanEvent) {
+      cancelAnimationFrame(animationId);
         if (i < words.length) {
             let currentTime = performance.now();
-            if(currentTime - startTime > delay) {
+            if(currentTime - startTime > (isCalledFromPanEvent? delay/2: delay)) {
                 startTime = currentTime;
                 const fragment = new DocumentFragment();
                 const length = words.length;
@@ -194,7 +195,47 @@
                 displayArea.appendChild(fragment);
                 i++;
             }
-            !paused && requestAnimationFrame(displayWord);
+            if(!paused) {
+              animationId = requestAnimationFrame(displayWord);
+            } 
+        }
+    }
+
+    function reverseDisplayWord() {
+      cancelAnimationFrame(animationId);
+        if (i < words.length) {
+            let currentTime = performance.now();
+            if(currentTime - startTime > (delay/ 2)) {
+                startTime = currentTime;
+                const fragment = new DocumentFragment();
+                const length = words.length;
+                const currentWord = document.createElement("span");
+    
+                const prevWords = 3;
+                for(let j=1; j<=prevWords; j++) {
+                  if(i>=j) {
+                    const prevWord = document.createElement("span");
+                    prevWord.classList.add("word");
+                    prevWord.style.opacity = opacities[j+1];
+                    prevWord.textContent = words[i-j];
+                    fragment.prepend(prevWord);
+                  }
+                }
+                const nextWords = 4;
+                for(let j=1; j<=nextWords; j++) {
+                  if(i+j<length) {
+                    const nextWord = document.createElement("span");
+                    nextWord.classList.add("word");
+                    nextWord.style.opacity = opacities[j];
+                    nextWord.style.fontWeight = j == 1? 'bolder': 'normal';
+                    nextWord.textContent = words[i+j-1];
+                    fragment.appendChild(nextWord);
+                  }
+                }
+                displayArea.textContent = "";
+                displayArea.appendChild(fragment);
+                i--;
+            }
         }
     }
     
@@ -223,7 +264,12 @@
   var element = document.getElementById('displayArea');
   var hammer = new Hammer(element);
   hammer.get('pan').set({ direction: Hammer.DIRECTION_VERTICAL });
-  hammer.on('panup', displayWord);
+  hammer.on('panup', () => displayWord(true));
+  hammer.on('pandown', ()=> {
+    animationId = requestAnimationFrame(reverseDisplayWord)
+  });
+  hammer.on('tap', pauseWords);
+  hammer.of('tap', displayWord);
 </script>
 </body>
 </html>
