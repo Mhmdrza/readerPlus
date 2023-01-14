@@ -156,16 +156,24 @@
       i = 0;
       pauseBtn.disabled = false;
       restartBtn.disabled = false;
-      startTime = performance.now();
-      animationId = requestAnimationFrame(displayWord);
+      startTime = 0// performance.now();
+      displayWord();
     }
     
-    function displayWord(isCalledFromPanEvent) {
+    function displayWord () {
+      let currentTime = performance.now();
+      if(currentTime - startTime > (delay)) {
+        startTime = currentTime;
+        _displayWord();
+      }
+      if(!paused) {
+        animationId = requestAnimationFrame(displayWord);
+      } 
+    }
+
+    function _displayWord() {
       cancelAnimationFrame(animationId);
         if (i < words.length) {
-            let currentTime = performance.now();
-            if(currentTime - startTime > (isCalledFromPanEvent? delay/2: delay)) {
-                startTime = currentTime;
                 const fragment = new DocumentFragment();
                 const length = words.length;
                 const currentWord = document.createElement("span");
@@ -195,17 +203,13 @@
                 displayArea.appendChild(fragment);
                 i++;
             }
-            if(!paused) {
-              animationId = requestAnimationFrame(displayWord);
-            } 
-        }
     }
 
-    function reverseDisplayWord() {
+    function reverseDisplayWord(customDelay) {
       cancelAnimationFrame(animationId);
         if (i < words.length) {
             let currentTime = performance.now();
-            if(currentTime - startTime > (delay/ 2)) {
+            if(currentTime - startTime > (customDelay || delay)) {
                 startTime = currentTime;
                 const fragment = new DocumentFragment();
                 const length = words.length;
@@ -240,21 +244,18 @@
     }
     
     function pauseWords() {
-      if (!paused) {
-        paused = true;
-        pauseBtn.innerHTML = "Resume";
-      } else {
+      paused = true;
+      clearTimeout(resumeId); 
+      resumeId = setTimeout(() => {
         paused = false;
-        pauseBtn.innerHTML = "Pause";
-        requestAnimationFrame(displayWord);
-      }
+        displayWord()
+      }, 2000);
     }
     
     function restartWords() {
-      i = 0;
       paused = false;
       pauseBtn.innerHTML = "Pause";
-      requestAnimationFrame(displayWord);
+      displayWords();
     }
     </script>
     
@@ -263,13 +264,28 @@
 <script>
   var element = document.getElementById('displayArea');
   var hammer = new Hammer(element);
+  var resumeId;
   hammer.get('pan').set({ direction: Hammer.DIRECTION_VERTICAL });
-  hammer.on('panup', () => displayWord(true));
-  hammer.on('pandown', ()=> {
-    animationId = requestAnimationFrame(reverseDisplayWord)
+  hammer.on('panup', ()=> {
+    animationId = requestAnimationFrame(() => _displayWord());
+    pauseBtn.innerHTML = "panup";
+    pauseWords();
   });
-  hammer.on('tap', pauseWords);
-  hammer.of('tap', displayWord);
+  hammer.on('pandown', ()=> {
+    animationId = requestAnimationFrame(() => reverseDisplayWord(1));
+    pauseBtn.innerHTML = "pandown";
+    pauseWords();
+  });
+  hammer.on('tap', () => {
+    if (!paused) {
+      paused = true;
+    } else {
+      paused = false; 
+      displayWord()
+    }
+  });
+  hammer.on('press', pauseWords);
+  hammer.off('press', displayWord);
 </script>
 </body>
 </html>
