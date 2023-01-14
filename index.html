@@ -249,7 +249,7 @@
       resumeId = setTimeout(() => {
         paused = false;
         displayWord()
-      }, 2000);
+      }, 1500);
     }
     
     function restartWords() {
@@ -279,6 +279,7 @@
   hammer.on('tap', () => {
     if (!paused) {
       paused = true;
+      clearTimeout(resumeId); 
     } else {
       paused = false; 
       displayWord()
