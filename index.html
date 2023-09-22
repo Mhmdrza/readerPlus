@@ -48,11 +48,15 @@
   </head>
 <body>
 
-<input type="text" id="textInput" value="This application is a powerful tool for anyone looking to improve their reading speed and comprehension. It allows you to input any text and set your desired words per minute (WPM) speed. Once you hit the START button, the application will present you with words from your input text at the specified WPM speed. The current word is highlighted in bold and previous and next words are presented with a fading effect to help you anticipate and connect the words. Not only that, but our application also comes with a built-in pause and restart feature, allowing you to take a break or start again with ease. This is especially useful for longer texts, as it allows you to break up your reading sessions into manageable chunks. Additionally, our application goes beyond the basic features of traditional speed reading apps. The app has a unique vertical swipe feature that allows you to go forward or backward in the text with a simple swipe of your finger. This allows you to easily review or re-read a section of text without having to manually scroll through the entire text. But it's not just about speed reading; our app is designed to help you improve your reading comprehension as well. By presenting you with previous and next words, it helps you to anticipate and connect the words, which can help you understand the text better.Overall, our application is the perfect tool for anyone looking to improve their reading speed and comprehension. Whether you're a student looking to breeze through your coursework, a professional looking to read through important documents quickly, or just someone looking to improve your reading skills, this application is for you. Try it out today and start reading faster and more efficiently than ever before!">
-<input type="number" id="speedInput" placeholder="Words per minute" value="600">
-<button onclick="displayWords()">Display Words</button>
-<button id="pauseBtn" onclick="pauseWords()" disabled>Pause</button>
-<button id="restartBtn" onclick="restartWords()" disabled>Restart</button>
+  <form onsubmit="speakText(); return false" >
+    <input type="text" id="textInput" value="which one is more painful? accepting the consequences of your choices or regret doing nothing in your life .">
+    <input type="number" id="speedInput" placeholder="Words per minute" value="600">
+    <button onclick="displayWords()">Display Words</button>
+    <button id="pauseBtn" onclick="pauseWords()" disabled>Pause</button>
+    <button id="restartBtn" onclick="restartWords()" disabled>Restart</button>
+    <button id="speakBtn" onclick="speakText()">Speak Text</button>
+    <input id="voices" type="number" value="7"></input>
+  </form>
 <div class="wrapper"><p id="displayArea"></p></dv >
 
   <script>
@@ -64,19 +68,57 @@
     var delay;
     var i = 0;
     var reversed = false;
-    var paused = false;
+    var paused = true;
     var pauseBtn = document.getElementById("pauseBtn");
     var restartBtn = document.getElementById("restartBtn");
     const opacities = [null, .9, .6, .3, .2, .2];
     let startTime = 0;
     
+    // function formSubmit(e) {
+    //   e.preventDefault();
+    //   speakText()
+    // }
+
+    const synthesis = window.speechSynthesis;
+    function speakText() {
+      const voices = synthesis.getVoices();
+      displayWords();
+      if (synthesis.speaking) {
+        // If speech synthesis is currently active, stop it
+        synthesis.cancel();
+      } else {
+        const inputText = document.getElementById("textInput").value;
+        const speechText = new SpeechSynthesisUtterance(inputText);
+        speechText.addEventListener("boundary", function (event) {
+          displayWord();
+        });
+        console.log({
+          voices
+        });
+        const FaIr = voices.filter(v => v.lang === 'en-US');
+        console.log({
+          FaIr
+        })
+        // Configure speech options if needed (e.g., voice, rate, pitch)
+        const voice = FaIr[document.querySelector('#voices').value];
+        console.log({
+          voice
+        })
+        speechText.voice =voice;
+        speechText.rate = 1;
+        speechText.pitch = .9;
+
+        synthesis.speak(speechText);
+      }
+    }
+
     function displayWords() {
       inputText = document.getElementById("textInput").value;
       speed = document.getElementById("speedInput").value;
       words = inputText.split(" ");
       displayArea = document.getElementById("displayArea");
       delay = 60000/speed; // delay is in milliseconds
-      i = 0;
+      i = -1;
       pauseBtn.disabled = false;
       restartBtn.disabled = false;
       startTime = 0;
@@ -96,48 +138,48 @@
 
     function _displayWord() {
       cancelAnimationFrame(animationId);
-      if (i < words.length) {
-        const fragment = new DocumentFragment();
-        const length = words.length;
-        const currentWord = document.createElement("span");
+      // reversed? i-- : i++;
+      const fragment = new DocumentFragment();
+      const length = words.length;
+      const currentWord = document.createElement("span");
 
-        const prevWords = 3;
-        for(let j=1; j<=prevWords; j++) {
-          if(i>=j) {
-            const prevWord = document.createElement("span");
-            prevWord.classList.add("word");
-            prevWord.style.opacity = opacities[j+1];
-            prevWord.textContent = words[i-j];
-            fragment.prepend(prevWord);
-          }
-        }
-        const nextWords = 4;
-        for(let j=1; j<=nextWords; j++) {
-          if(i+j<length) {
-            const nextWord = document.createElement("span");
-            nextWord.classList.add("word");
-            nextWord.style.opacity = opacities[j];
-            nextWord.style.fontWeight = j == 1? 'bolder': 'normal';
-            nextWord.textContent = words[i+j-1];
-            fragment.appendChild(nextWord);
-          }
-        }
-        displayArea.textContent = "";
-        displayArea.appendChild(fragment);
-        reversed? i-- : i++;
+      const prevWords = 3;
+      for(let j=1; j<=prevWords; j++) {
+        // if(i>=j) {
+          const prevWord = document.createElement("span");
+          prevWord.classList.add("word");
+          prevWord.style.opacity = opacities[j+1];
+          prevWord.textContent = words[i-j] || '';
+          fragment.prepend(prevWord);
+        // }
+      }
+      const nextWords = 4;
+      for(let j=1; j<=nextWords; j++) {
+        // if(i+j<length) {
+          const nextWord = document.createElement("span");
+          nextWord.classList.add("word");
+          nextWord.style.opacity = opacities[j];
+          nextWord.style.fontWeight = j == 1? 'bolder': 'normal';
+          nextWord.textContent = words[i+j-1] || '';
+          fragment.appendChild(nextWord);
+        // }
+      }
+      displayArea.textContent = "";
+      displayArea.appendChild(fragment);
+      i++;
     }
-  }
+
 
 
     function pauseWords() {
       paused = true;
-      clearTimeout(resumeId); 
-      resumeId = setTimeout(() => {
-        paused = false;
-        reversed? i++ : i-- ;
-        reversed = false;
-        displayWord()
-      }, 1500);
+      // clearTimeout(resumeId); 
+      // resumeId = setTimeout(() => {
+      //   paused = false;
+      //   reversed? i++ : i-- ;
+      //   reversed = false;
+      //   displayWord()
+      // }, 1500);
     }
     
     function restartWords() {
@@ -146,10 +188,47 @@
       pauseBtn.innerHTML = "Pause";
       displayWords();
     }
+    displayWords();
+    </script>
+    <script>
+      window.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowUp') {
+        reversed = true;
+        displayWord(null, delay / 3);
+        pauseBtn.innerHTML = "ArrowUp";
+        pauseWords();
+      } else if (event.key === 'ArrowDown') {
+        reversed = false;
+        displayWord(null, delay / 2);
+        pauseBtn.innerHTML = "ArrowDown";
+        pauseWords();
+      } else if (event.key === 'ArrowRight') {
+        // Add custom style to the current word
+        addCustomStyleToCurrentWord();
+      } else if (event.key === 'ArrowLeft') {
+        // Remove custom style from the current word
+        removeCustomStyleFromCurrentWord();
+      }
+    });
+    function addCustomStyleToCurrentWord() {
+      const centerWordIndex =( displayArea.children.length / 2).toFixed(0);
+      const currentWordElement = displayArea.children[centerWordIndex - 1];
+      currentWordElement.style.transform = 'scale(1.5)';
+      currentWordElement.style.transition = 'transform .2s';
+      // currentWordElement.style.fontSize = '4rem !important'; // You can adjust the font size as needed
+    }
+
+    // Function to remove custom style from the current word
+    function removeCustomStyleFromCurrentWord() {
+      const centerWordIndex =( displayArea.children.length / 2).toFixed(0);
+      const currentWordElement = displayArea.children[centerWordIndex - 1];
+      currentWordElement.style.transform = 'scale(1)';
+      // currentWordElement.style.fontWeight = 'normal';
+      // currentWordElement.style.fontSize = '3rem'; // Restore the original font size
+    }
     </script>
     
-
-<script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
+<!-- <script src="https://hammerjs.github.io/dist/hammer.min.js"></script>
 <script>
   var element = document.getElementById('displayArea');
   var hammer = new Hammer(element);
@@ -180,6 +259,41 @@
   });
   hammer.on('press', pauseWords);
   hammer.off('press', displayWord);
-</script>
+  window.addEventListener('keydown', function (event) {
+    if (event.key === 'ArrowUp') {
+      reversed = true;
+      displayWord(null, delay / 3);
+      pauseBtn.innerHTML = "ArrowUp";
+      pauseWords();
+    } else if (event.key === 'ArrowDown') {
+      reversed = false;
+      displayWord(null, delay / 2);
+      pauseBtn.innerHTML = "ArrowDown";
+      pauseWords();
+    } else if (event.key === 'ArrowRight') {
+      // Add custom style to the current word
+      addCustomStyleToCurrentWord();
+    } else if (event.key === 'ArrowLeft') {
+      // Remove custom style from the current word
+      removeCustomStyleFromCurrentWord();
+    }
+  });
+  function addCustomStyleToCurrentWord() {
+    const centerWordIndex =( displayArea.children.length / 2).toFixed(0);
+    const currentWordElement = displayArea.children[centerWordIndex - 1];
+    currentWordElement.style.transform = 'scale(1.5)';
+    currentWordElement.style.transition = 'transform .2s';
+    // currentWordElement.style.fontSize = '4rem !important'; // You can adjust the font size as needed
+  }
+
+  // Function to remove custom style from the current word
+  function removeCustomStyleFromCurrentWord() {
+    const centerWordIndex =( displayArea.children.length / 2).toFixed(0);
+    const currentWordElement = displayArea.children[centerWordIndex - 1];
+    currentWordElement.style.transform = 'scale(1)';
+    // currentWordElement.style.fontWeight = 'normal';
+    // currentWordElement.style.fontSize = '3rem'; // Restore the original font size
+  }
+</script> -->
 </body>
 </html>
